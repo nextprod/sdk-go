@@ -32,7 +32,7 @@ func StartWithContext(ctx context.Context, handler Handler) {
 func start(ctx context.Context, handler Handler) {
 	for _, start := range startFunctions {
 		if err := start.f(ctx, handler); err != nil {
-			log.Fatalf("%v", err)
+			log.Fatalf("finished: %v", err)
 		}
 	}
 }
