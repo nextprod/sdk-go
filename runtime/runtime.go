@@ -26,9 +26,9 @@ func (s *server) Invoke(ctx context.Context, in *pb.InvokeRequest) (*pb.InvokeRe
 	log.Printf("Received: %v", in)
 	_, err := s.invokeHandler.Invoke(ctx, in.GetEvent())
 	if err != nil {
-		return nil, err
+		return &pb.InvokeReply{State: pb.State_Fail, Reason: err.Error()}, nil
 	}
-	return &pb.InvokeReply{}, nil
+	return &pb.InvokeReply{State: pb.State_Success}, nil
 }
 
 // withContext ...
