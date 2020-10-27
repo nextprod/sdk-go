@@ -23,7 +23,6 @@ type server struct {
 
 // Invoke implements nex.RPCServer
 func (s *server) Invoke(ctx context.Context, in *pb.InvokeRequest) (*pb.InvokeReply, error) {
-	log.Printf("Received: %v", in)
 	_, err := s.invokeHandler.Invoke(ctx, in.GetEvent())
 	if err != nil {
 		return &pb.InvokeReply{State: pb.State_Fail, Reason: err.Error()}, nil
