@@ -8,15 +8,15 @@ import (
 
 // Handler represents extension handler function.
 type Handler interface {
-	Invoke(ctx context.Context, payload []byte) ([]byte, error)
+	Invoke(ctx context.Context, event interface{}) ([]byte, error)
 }
 
 // extensionHandler represents generic extension handler function type
-type extensionHandler func(context.Context, []byte) (interface{}, error)
+type extensionHandler func(context.Context, interface{}) (interface{}, error)
 
 // Invoke calls handler and serializes response.
-func (h extensionHandler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
-	response, err := h(ctx, payload)
+func (h extensionHandler) Invoke(ctx context.Context, event interface{}) ([]byte, error) {
+	response, err := h(ctx, event)
 	if err != nil {
 		return nil, err
 	}
@@ -32,10 +32,10 @@ type serverOpt func(*server)
 // NewHandler ...
 func NewHandler(h interface{}) Handler {
 	handler := reflect.ValueOf(h)
-	return extensionHandler(func(ctx context.Context, payload []byte) (interface{}, error) {
+	return extensionHandler(func(ctx context.Context, event interface{}) (interface{}, error) {
 		var args []reflect.Value
 		args = append(args, reflect.ValueOf(ctx))
-		args = append(args, reflect.ValueOf(payload))
+		args = append(args, reflect.ValueOf(event))
 		res := handler.Call(args)
 
 		var err error

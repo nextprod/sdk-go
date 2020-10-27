@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"os"
 
@@ -23,7 +24,11 @@ type server struct {
 
 // Invoke implements nex.RPCServer
 func (s *server) Invoke(ctx context.Context, in *pb.InvokeRequest) (*pb.InvokeReply, error) {
-	_, err := s.invokeHandler.Invoke(ctx, in.GetEvent())
+	var event interface{}
+	if err := json.Unmarshal(in.GetEvent(), &event); err != nil {
+		return &pb.InvokeReply{State: pb.State_Fail, Reason: err.Error()}, nil
+	}
+	_, err := s.invokeHandler.Invoke(ctx, event)
 	if err != nil {
 		return &pb.InvokeReply{State: pb.State_Fail, Reason: err.Error()}, nil
 	}
