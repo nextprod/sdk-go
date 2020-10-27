@@ -3,19 +3,20 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
 // Handler represents extension handler function.
 type Handler interface {
-	Invoke(ctx context.Context, event interface{}) ([]byte, error)
+	Invoke(ctx context.Context, event []byte) ([]byte, error)
 }
 
 // extensionHandler represents generic extension handler function type
-type extensionHandler func(context.Context, interface{}) (interface{}, error)
+type extensionHandler func(context.Context, []byte) (interface{}, error)
 
 // Invoke calls handler and serializes response.
-func (h extensionHandler) Invoke(ctx context.Context, event interface{}) ([]byte, error) {
+func (h extensionHandler) Invoke(ctx context.Context, event []byte) ([]byte, error) {
 	response, err := h(ctx, event)
 	if err != nil {
 		return nil, err
@@ -27,15 +28,35 @@ func (h extensionHandler) Invoke(ctx context.Context, event interface{}) ([]byte
 	return res, nil
 }
 
+func errorHandler(e error) extensionHandler {
+	return func(ctx context.Context, event []byte) (interface{}, error) {
+		return nil, e
+	}
+}
+
 type serverOpt func(*server)
 
 // NewHandler ...
 func NewHandler(h interface{}) Handler {
+	if h == nil {
+		return errorHandler(fmt.Errorf("handler is nil"))
+	}
 	handler := reflect.ValueOf(h)
-	return extensionHandler(func(ctx context.Context, event interface{}) (interface{}, error) {
+	htype := reflect.TypeOf(h)
+	if htype.Kind() != reflect.Func {
+		return errorHandler(fmt.Errorf("handler kind %s is not %s", htype.Kind(), reflect.Func))
+	}
+	return extensionHandler(func(ctx context.Context, payload []byte) (interface{}, error) {
 		var args []reflect.Value
 		args = append(args, reflect.ValueOf(ctx))
-		args = append(args, reflect.ValueOf(event))
+		eventType := htype.In(htype.NumIn() - 1)
+		event := reflect.New(eventType)
+
+		if err := json.Unmarshal(payload, event.Interface()); err != nil {
+			return nil, err
+		}
+		args = append(args, event.Elem())
+
 		res := handler.Call(args)
 
 		var err error
